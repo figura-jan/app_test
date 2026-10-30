@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dot-to-Dot Adventure</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Trebuchet MS", "Arial Rounded MT Bold", sans-serif;
+      color: #23345b;
+      background: #f4f8ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 28px 18px;
+      background:
+        radial-gradient(circle at 12% 14%, #fff2bd 0 7px, transparent 8px),
+        radial-gradient(circle at 88% 18%, #d9f6ec 0 9px, transparent 10px),
+        #f4f8ff;
+    }
+
+    main {
+      width: min(100%, 1050px);
+      margin: 0 auto;
+    }
+
+    header { text-align: center; }
+
+    h1 {
+      margin: 0;
+      color: #304b91;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      letter-spacing: -1px;
+    }
+
+    .subtitle {
+      margin: 8px 0 22px;
+      color: #667493;
+      font-size: 1.08rem;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 0 auto 14px;
+    }
+
+    .count-control {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 13px;
+      border: 2px solid #dfe7f7;
+      border-radius: 14px;
+      background: white;
+      font-weight: 700;
+    }
+
+    input {
+      width: 68px;
+      padding: 7px;
+      border: 2px solid #dfe7f7;
+      border-radius: 9px;
+      color: #23345b;
+      font: inherit;
+      font-size: 1rem;
+      text-align: center;
+    }
+
+    button {
+      min-height: 46px;
+      padding: 10px 19px;
+      border: 0;
+      border-radius: 14px;
+      background: #526fe0;
+      box-shadow: 0 4px 0 #3c55bc;
+      color: white;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+
+    button:hover { background: #405fce; }
+    button:active { transform: translateY(3px); box-shadow: 0 1px 0 #3c55bc; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #ffbd4a; outline-offset: 3px; }
+
+    .status {
+      min-height: 30px;
+      margin: 0 0 10px;
+      color: #52617f;
+      font-size: 1.08rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .board {
+      overflow: hidden;
+      border: 4px solid white;
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: 0 12px 35px #50679a1c;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 5 / 3;
+      background-color: #fff;
+      background-image: radial-gradient(#e9eef8 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+      touch-action: manipulation;
+    }
+
+    .connection {
+      stroke: #25b98a;
+      stroke-width: 8;
+      stroke-linecap: round;
+      animation: draw-in 220ms ease-out both;
+    }
+
+    .dot { cursor: pointer; outline: none; }
+    .dot .hit-area { fill: transparent; }
+    .dot .bubble {
+      fill: #ffd166;
+      stroke: #fff;
+      stroke-width: 5;
+      transition: fill 150ms ease, transform 150ms ease;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+
+    .dot:nth-of-type(even) .bubble { fill: #8bd8f5; }
+    .dot:nth-of-type(3n) .bubble { fill: #ff9f9f; }
+    .dot text {
+      fill: #26365c;
+      font-size: 25px;
+      font-weight: 800;
+      pointer-events: none;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    .dot.done .bubble { fill: #72d6ae; }
+    .dot.wrong .bubble { fill: #ff8585; }
+    .dot:focus-visible .bubble { stroke: #526fe0; stroke-width: 7; }
+
+    .celebration {
+      color: #218c68;
+      animation: pop 450ms ease-out;
+    }
+
+    @keyframes draw-in {
+      from { stroke-dasharray: 1; stroke-dashoffset: 1; }
+      to { stroke-dasharray: 1; stroke-dashoffset: 0; }
+    }
+
+    @keyframes pop {
+      50% { transform: scale(1.12); }
+    }
+
+    @media (max-width: 560px) {
+      body { padding: 20px 10px; }
+      .subtitle { margin-bottom: 16px; }
+      .board { border-width: 3px; border-radius: 16px; }
+      .dot text { font-size: 30px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Dot-to-Dot Adventure</h1>
+      <p class="subtitle">Click the numbers in order and see what you can make!</p>
+    </header>
+
+    <section class="toolbar" aria-label="Puzzle controls">
+      <label class="count-control" for="dot-count">
+        Number of dots
+        <input id="dot-count" type="number" min="2" max="30" value="10">
+      </label>
+      <button id="new-puzzle" type="button">New Puzzle</button>
+    </section>
+
+    <p id="status" class="status" aria-live="polite">Click dot 1 to begin!</p>
+    <div class="board">
+      <svg id="workspace" viewBox="0 0 1000 600" role="group" aria-label="Numbered dot-to-dot puzzle"></svg>
+    </div>
+  </main>
+
+  <script>
+    const svg = document.querySelector("#workspace");
+    const countInput = document.querySelector("#dot-count");
+    const status = document.querySelector("#status");
+    const colors = ["#ffd166", "#8bd8f5", "#ff9f9f", "#c5a5f5", "#ffa96b"];
+    let nextNumber = 1;
+    let previousPoint = null;
+    let points = [];
+
+    function createPoints(count) {
+      const columns = 6;
+      const rows = 5;
+      const cells = [];
+
+      for (let row = 0; row < rows; row++) {
+        for (let column = 0; column < columns; column++) {
+          cells.push({
+            x: 85 + column * 166,
+            y: 65 + row * 118
+          });
+        }
+      }
+
+      for (let index = cells.length - 1; index > 0; index--) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        [cells[index], cells[swapIndex]] = [cells[swapIndex], cells[index]];
+      }
+
+      return cells.slice(0, count).map((cell, index) => ({
+        number: index + 1,
+        x: cell.x + (Math.random() * 30 - 15),
+        y: cell.y + (Math.random() * 24 - 12)
+      }));
+    }
+
+    function connect(point) {
+      const dot = svg.querySelector(`[data-number="${point.number}"]`);
+      if (point.number !== nextNumber) {
+        dot.classList.remove("wrong");
+        void dot.getBoundingClientRect();
+        dot.classList.add("wrong");
+        window.setTimeout(() => dot.classList.remove("wrong"), 350);
+        status.textContent = `Look for number ${nextNumber}!`;
+        return;
+      }
+
+      dot.classList.add("done");
+      if (previousPoint) {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", previousPoint.x);
+        line.setAttribute("y1", previousPoint.y);
+        line.setAttribute("x2", point.x);
+        line.setAttribute("y2", point.y);
+        line.setAttribute("class", "connection");
+        svg.insertBefore(line, svg.firstChild);
+      }
+
+      previousPoint = point;
+      nextNumber++;
+      if (nextNumber > points.length) {
+        status.textContent = "Amazing! You connected every dot! 🎉";
+        status.classList.add("celebration");
+      } else {
+        status.textContent = `Great job! Now find number ${nextNumber}.`;
+      }
+    }
+
+    function newPuzzle() {
+      const requestedCount = Number.parseInt(countInput.value, 10);
+      const count = Number.isFinite(requestedCount)
+        ? Math.min(30, Math.max(2, requestedCount))
+        : 10;
+
+      countInput.value = String(count);
+      points = createPoints(count);
+      nextNumber = 1;
+      previousPoint = null;
+      status.classList.remove("celebration");
+      status.textContent = "Click dot 1 to begin!";
+      svg.replaceChildren();
+
+      for (const point of points) {
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        group.setAttribute("class", "dot");
+        group.setAttribute("data-number", point.number);
+        group.setAttribute("transform", `translate(${point.x} ${point.y})`);
+        group.setAttribute("tabindex", "0");
+        group.setAttribute("role", "button");
+        group.setAttribute("aria-label", `Dot ${point.number}`);
+
+        const hitArea = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        hitArea.setAttribute("class", "hit-area");
+        hitArea.setAttribute("r", "38");
+        group.append(hitArea);
+
+        const bubble = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        bubble.setAttribute("class", "bubble");
+        bubble.setAttribute("r", "30");
+        bubble.style.fill = colors[(point.number - 1) % colors.length];
+        group.append(bubble);
+
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.textContent = String(point.number);
+        group.append(label);
+
+        group.addEventListener("click", () => connect(point));
+        group.addEventListener("keydown", event => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            connect(point);
+          }
+        });
+        svg.append(group);
+      }
+    }
+
+    document.querySelector("#new-puzzle").addEventListener("click", newPuzzle);
+    countInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") newPuzzle();
+    });
+    newPuzzle();
+  </script>
+</body>
+</html>
