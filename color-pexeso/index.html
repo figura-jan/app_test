@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Color Pairs - A Matching Game</title>
+  <style>
+    :root {
+      font-family: "Trebuchet MS", "Arial Rounded MT Bold", sans-serif;
+      color: #29385b;
+      background: #f3f7ff;
+      font-synthesis: none;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      height: 100vh;
+      height: 100dvh;
+      margin: 0;
+      overflow: hidden;
+      padding: clamp(8px, 2vh, 20px) 12px;
+      background:
+        radial-gradient(circle at 8% 12%, #ffdf91 0 7px, transparent 8px),
+        radial-gradient(circle at 92% 17%, #bcebd7 0 9px, transparent 10px),
+        #f3f7ff;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      width: min(100%, 790px, calc((100dvh - 200px) * 1.25 + 100px));
+      height: 100%;
+      min-height: 0;
+      margin: 0 auto;
+    }
+
+    header { text-align: center; }
+
+    h1 {
+      margin: 0;
+      color: #405fbd;
+      font-size: clamp(2.1rem, 6vw, 3.3rem);
+      letter-spacing: -1px;
+    }
+
+    .subtitle {
+      margin: 4px 0 12px;
+      color: #65728e;
+      font-size: clamp(0.82rem, 2vh, 1.08rem);
+      line-height: 1.5;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      flex: 0 0 auto;
+      margin-bottom: 8px;
+    }
+
+    .score {
+      color: #52617e;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    button { font: inherit; }
+
+    .restart {
+      min-height: 44px;
+      padding: 9px 18px;
+      border: 0;
+      border-radius: 13px;
+      background: #526fe0;
+      box-shadow: 0 4px 0 #3c55bc;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+
+    .restart:hover { background: #405fce; }
+    .restart:active { transform: translateY(3px); box-shadow: 0 1px 0 #3c55bc; }
+
+    .status {
+      flex: 0 0 auto;
+      min-height: 24px;
+      margin: 0 0 8px;
+      color: #52617e;
+      font-size: clamp(0.82rem, 2vh, 1.05rem);
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .status.win { color: #218c68; }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-rows: repeat(4, minmax(0, 1fr));
+      flex: 1 1 auto;
+      min-height: 0;
+      gap: clamp(5px, 1.5vw, 12px);
+      padding: clamp(8px, 2vw, 16px);
+      border: 4px solid #fff;
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: 0 12px 35px #50679a1c;
+    }
+
+    .card {
+      position: relative;
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 15px;
+      background: transparent;
+      cursor: pointer;
+      perspective: 700px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .card-inner {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      border: 3px solid #e1e8fa;
+      border-radius: inherit;
+      background: #eaf0ff;
+      place-items: center;
+      transform: rotateY(0);
+      transform-style: preserve-3d;
+      transition: transform 320ms ease, background-color 160ms ease, border-color 160ms ease;
+    }
+
+    .face-back {
+      color: #8094d5;
+      font-size: clamp(1.7rem, 5vw, 2.5rem);
+      font-weight: 800;
+    }
+
+    .card:hover:not(:disabled) .card-inner { background: #dfe8ff; }
+    .card.is-revealed .card-inner, .card.is-matched .card-inner {
+      border-color: #dfe6f3;
+      background: #fff;
+      transform: rotateY(180deg);
+    }
+
+    .face {
+      position: absolute;
+      inset: 5px;
+      display: grid;
+      overflow: hidden;
+      border-radius: 10px;
+      backface-visibility: hidden;
+      place-items: center;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .face-back { transform: rotateY(0); }
+    .face-front { transform: rotateY(180deg); }
+
+    .color-swatch {
+      width: 100%;
+      height: 100%;
+      border: 2px solid #25334b1a;
+      border-radius: 8px;
+    }
+
+    .word {
+      padding: 2px;
+      color: #304166;
+      font-size: clamp(0.7rem, 2.6vw, 1.25rem);
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      overflow-wrap: anywhere;
+    }
+
+    .card.is-matched .card-inner {
+      border-color: #70cba6;
+      background: #effbf5;
+    }
+
+    .card:disabled { cursor: default; }
+
+    .card:focus-visible, .restart:focus-visible {
+      outline: 4px solid #ffbd4a;
+      outline-offset: 3px;
+    }
+
+    @media (max-width: 580px) {
+      body { padding: 8px; }
+      main { width: min(100%, calc((100dvh - 200px) * 0.8 + 100px)); }
+      .board {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-rows: repeat(5, minmax(0, 1fr));
+        border-width: 3px;
+        border-radius: 17px;
+      }
+      .card { border-radius: 12px; }
+      .toolbar { gap: 14px; }
+    }
+
+    @media (max-width: 350px) {
+      .board { gap: 5px; padding: 7px; }
+      .face { inset: 3px; }
+      .word { font-size: 0.66rem; }
+    }
+
+    @media (max-height: 500px) {
+      h1 { font-size: clamp(1.5rem, 7vh, 2rem); }
+      .subtitle { display: none; }
+      .toolbar { margin-bottom: 4px; }
+      .restart { min-height: 36px; padding: 5px 14px; }
+      .status { min-height: 20px; margin-bottom: 4px; }
+      .board { gap: 5px; padding: 7px; border-radius: 15px; }
+    }
+
+    @media (max-height: 360px) {
+      body { padding-top: 4px; padding-bottom: 4px; }
+      h1 { font-size: 1.35rem; }
+      .toolbar { gap: 8px; }
+      .score { font-size: 0.8rem; }
+      .restart { min-height: 30px; padding: 3px 10px; }
+      .status { font-size: 0.75rem; }
+      .face-back { font-size: 1.3rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Color Pairs</h1>
+      <p class="subtitle">Turn over two cards. Match each color to its English word!</p>
+    </header>
+
+    <section class="toolbar" aria-label="Game controls">
+      <div id="score" class="score" aria-live="polite">Pairs: 0 / 10 &nbsp;|&nbsp; Turns: 0</div>
+      <button id="restart" class="restart" type="button">New Game</button>
+    </section>
+
+    <p id="status" class="status" aria-live="polite">Find a color and its matching word.</p>
+    <section id="board" class="board" aria-label="Color matching cards"></section>
+  </main>
+
+  <script>
+    const colors = [
+      { name: "RED", value: "#e53935" },
+      { name: "BLUE", value: "#2878d0" },
+      { name: "YELLOW", value: "#ffd43b" },
+      { name: "GREEN", value: "#2eaa62" },
+      { name: "ORANGE", value: "#f28c28" },
+      { name: "PURPLE", value: "#8b5ac2" },
+      { name: "PINK", value: "#ed75a5" },
+      { name: "BROWN", value: "#895b3c" },
+      { name: "BLACK", value: "#252a34" },
+      { name: "WHITE", value: "#ffffff" }
+    ];
+
+    const board = document.querySelector("#board");
+    const score = document.querySelector("#score");
+    const status = document.querySelector("#status");
+    let firstCard = null;
+    let locked = false;
+    let matchedPairs = 0;
+    let turns = 0;
+    let mismatchTimer = null;
+
+    function shuffle(cards) {
+      for (let index = cards.length - 1; index > 0; index--) {
+        const otherIndex = Math.floor(Math.random() * (index + 1));
+        [cards[index], cards[otherIndex]] = [cards[otherIndex], cards[index]];
+      }
+      return cards;
+    }
+
+    function updateScore() {
+      score.textContent = `Pairs: ${matchedPairs} / ${colors.length}  |  Turns: ${turns}`;
+    }
+
+    function reveal(card) {
+      card.classList.add("is-revealed");
+      card.setAttribute("aria-label", card.dataset.label);
+    }
+
+    function hide(card) {
+      card.classList.remove("is-revealed");
+      card.setAttribute("aria-label", "Face-down card");
+    }
+
+    function chooseCard(card) {
+      if (locked || card.disabled || card === firstCard) return;
+
+      reveal(card);
+      if (!firstCard) {
+        firstCard = card;
+        status.textContent = "Now find its matching card.";
+        return;
+      }
+
+      turns++;
+      const secondCard = card;
+      const previousCard = firstCard;
+      updateScore();
+
+      if (firstCard.dataset.color === secondCard.dataset.color
+          && firstCard.dataset.kind !== secondCard.dataset.kind) {
+        firstCard.classList.add("is-matched");
+        secondCard.classList.add("is-matched");
+        firstCard.disabled = true;
+        secondCard.disabled = true;
+        firstCard.setAttribute("aria-label", `${firstCard.dataset.label}, matched`);
+        secondCard.setAttribute("aria-label", `${secondCard.dataset.label}, matched`);
+        matchedPairs++;
+        firstCard = null;
+        updateScore();
+
+        if (matchedPairs === colors.length) {
+          status.textContent = `Wonderful! You found all the pairs in ${turns} turns!`;
+          status.classList.add("win");
+        } else {
+          status.textContent = "A match! Find another color and word.";
+        }
+        return;
+      }
+
+      locked = true;
+      firstCard = null;
+      status.textContent = "Not a pair. Try another match!";
+      mismatchTimer = window.setTimeout(() => {
+        hide(previousCard);
+        hide(card);
+        locked = false;
+        mismatchTimer = null;
+        status.textContent = "Find a color and its matching word.";
+      }, 900);
+    }
+
+    function createCard(item, kind) {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "card";
+      card.dataset.color = item.name;
+      card.dataset.kind = kind;
+      card.dataset.label = kind === "color"
+        ? `${item.name.toLowerCase()} color`
+        : `word ${item.name.toLowerCase()}`;
+      card.setAttribute("aria-label", "Face-down card");
+
+      const inner = document.createElement("span");
+      inner.className = "card-inner";
+      inner.setAttribute("aria-hidden", "true");
+
+      const back = document.createElement("span");
+      back.className = "face face-back";
+      back.textContent = "?";
+      inner.append(back);
+
+      const face = document.createElement("span");
+      face.className = "face face-front";
+      if (kind === "color") {
+        const swatch = document.createElement("span");
+        swatch.className = "color-swatch";
+        swatch.style.backgroundColor = item.value;
+        if (item.name === "WHITE") swatch.style.borderColor = "#bcc7d9";
+        face.append(swatch);
+      } else {
+        const word = document.createElement("span");
+        word.className = "word";
+        word.textContent = item.name;
+        face.append(word);
+      }
+
+      inner.append(face);
+      card.append(inner);
+      card.addEventListener("click", () => chooseCard(card));
+      return card;
+    }
+
+    function newGame() {
+      if (mismatchTimer !== null) {
+        window.clearTimeout(mismatchTimer);
+        mismatchTimer = null;
+      }
+      locked = false;
+      firstCard = null;
+      matchedPairs = 0;
+      turns = 0;
+      status.classList.remove("win");
+      status.textContent = "Find a color and its matching word.";
+      updateScore();
+
+      const cards = colors.flatMap(item => [
+        createCard(item, "color"),
+        createCard(item, "word")
+      ]);
+      board.replaceChildren(...shuffle(cards));
+    }
+
+    document.querySelector("#restart").addEventListener("click", newGame);
+    newGame();
+  </script>
+</body>
+</html>
